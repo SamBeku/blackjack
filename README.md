@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Blackjack
 
-## Getting Started
+Next.js-iga tehtud blackjacki mäng. Panustad žetoonidega, mängid diileri vastu ja oma parima tulemuse saad edetabelisse salvestada.
 
-First, run the development server:
+![Mängu ekraanipilt](docs/screenshot.jpg)
+
+## Käivitamine
+
+Vaja on Node.js 22.13 või uuemat, sest edetabel kasutab sisseehitatud `node:sqlite` moodulit.
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Seejärel ava brauseris http://localhost:3000.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+Teised käsud:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm test        # mängu reeglite ja edetabeli kontrolli testid
+npm run lint
+npm run build
+```
 
-## Learn More
+## Reeglid
 
-To learn more about Next.js, take a look at the following resources:
+- Alguses on sul $1000. Panuse valid žetoonidega 10, 20, 50 ja 100 ning vajutad **Deal**.
+- **Hit** annab sulle uue kaardi ja **Stand** lõpetab sinu käigu.
+- **Double** kahekordistab panuse ja annab täpselt ühe kaardi. See on lubatud ainult kahe esimese kaardiga.
+- Diiler võtab kaarte, kuni tal on vähemalt 17 punkti.
+- Blackjack ehk äss ja 10-punktine kaart maksab 3:2, tavaline võit 1:1 ja viigi korral saad panuse tagasi.
+- Mängitakse 6 kaardipakiga. Kui alles jääb vähem kui üks pakk, segatakse kaardid uuesti.
+- Kui lahkud lehelt käe ajal, jääb panus kaotatuks nagu päris kasiinos.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Kuidas see töötab
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Osa | Fail | Mida teeb |
+|---|---|---|
+| Reeglid | `lib/blackjack.js` | Puhtad funktsioonid: pakk, segamine, käe väärtus, tulemus ja väljamakse. Reacti siin pole, nii et neid saab eraldi testida. |
+| Mäng | `app/components/Game.jsx` | Client Component, mis hoiab mängu olekut (`useState`): kaardid, panus, saldo ja käigu faas. |
+| Kaardid | `Card.jsx`, `Hand.jsx` | Kaart ja käsi koos summaga. Diileri teine kaart on sinu käigu ajal peidus. |
+| Salvestus | `localStorage` | Saldo ja statistika jäävad alles ka pärast lehe värskendamist. |
+| Edetabel (API) | `app/api/leaderboard/route.js` | `GET` tagastab 10 parimat tulemust ja `POST` salvestab uue. |
+| Andmebaas | `lib/db.js` | SQLite fail `data/blackjack.db`, mis ei ole gitis. |
+| Kontroll | `lib/score.js` | Server kontrollib nime, saldot ja käte arvu, sest brauserist tulevat infot ei saa usaldada. |
 
-## Deploy on Vercel
+### Miks mäng renderdatakse ainult brauseris?
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Saldo loetakse `localStorage`-ist, mida serveris ei ole. Seepärast laeb `GameLoader.jsx` mängu `dynamic(..., { ssr: false })` abil ainult brauseris.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Miks API kutsub `await connection()`?
+
+Next.js 16 püüab `GET` route'id buildi ajal valmis renderdada. SQLite päring on sünkroonne, nii et ilma `connection()` kutseta jääks edetabel buildi aegsesse seisu kinni.
+
+## Teadaolev piirang
+
+Saldo arvutatakse brauseris, seega saab osav kasutaja edetabelisse saata võltsitud tulemuse. Server lubab ainult mõistlikke väärtusi, aga täielikult turvaline oleks see alles siis, kui kogu mänguloogika jookseks serveris. See on järgmine samm, kui projekti edasi arendada.
+
+## Arendus
+
+Iga osa tehti eraldi feature-harus ja lisati `main`-i pull requestiga:
+
+1. `feat/game-logic`: reeglid ja testid
+2. `feat/table-ui`: mängulaud, panused ja statistika
+3. `feat/leaderboard`: edetabel, API ja SQLite
+4. `docs/readme`: see fail
+
+Projekt on tehtud [Claude Code](https://claude.com/claude-code) abil.
