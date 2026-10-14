@@ -422,3 +422,87 @@ button:disabled {
     flex: 1;
   }
 }
+
+/* ---------- Edetabel ---------- */
+
+.muted {
+  color: var(--muted);
+}
+
+.small {
+  font-size: 0.8rem;
+  margin-top: 8px;
+}
+
+.leaderboard {
+  list-style: none;
+  counter-reset: rank;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.leaderboard li {
+  counter-increment: rank;
+  display: grid;
+  grid-template-columns: 22px 1fr auto;
+  grid-template-rows: auto auto;
+  column-gap: 8px;
+  align-items: baseline;
+}
+
+.leaderboard li::before {
+  content: counter(rank) '.';
+  grid-row: span 2;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.leaderboard li:first-child::before {
+  content: '♛';
+  color: var(--gold);
+}
+
+.lb-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lb-balance {
+  color: var(--gold);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.lb-hands {
+  grid-column: 2 / span 2;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.save-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.save-form input {
+  background: var(--bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  color: var(--text);
+  font: inherit;
+  padding: 10px 12px;
+}
+
+.save-form input:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+
+.save-form .btn {
+  width: 100%;
+}
