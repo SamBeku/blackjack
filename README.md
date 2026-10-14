@@ -34,6 +34,17 @@ npm run build
 - Mängitakse 6 kaardipakiga. Kui alles jääb vähem kui üks pakk, segatakse kaardid uuesti.
 - Kui lahkud lehelt käe ajal, jääb panus kaotatuks nagu päris kasiinos.
 
+### Kiirklahvid
+
+| Klahv | Käik |
+|---|---|
+| `H` | Hit |
+| `S` | Stand |
+| `D` | Double |
+| `P` | Split |
+
+Kiirklahvid töötavad ainult sinu käigu ajal. Kui kirjutad edetabeli nimevälja, on need välja lülitatud.
+
 ## Kuidas see töötab
 
 | Osa | Fail | Mida teeb |
@@ -67,5 +78,6 @@ Iga osa tehti eraldi feature-harus ja lisati `main`-i pull requestiga:
 3. `feat/leaderboard`: edetabel, API ja SQLite
 4. `docs/readme`: see fail
 5. `feat/split`: split ehk paari jagamine kaheks käeks
+6. `feat/hotkeys`: kiirklahvid H, S, D ja P
 
 Projekt on tehtud [Claude Code](https://claude.com/claude-code) abil.
