@@ -420,6 +420,7 @@ button:disabled {
   .btn {
     min-width: 0;
     flex: 1;
+    padding: 10px 6px;
   }
 }
 
