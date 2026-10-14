@@ -1,17 +1,24 @@
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #0e1311;
+  --panel: #171e1b;
+  --panel-border: #26302b;
+  --text: #f2f0e9;
+  --muted: #9eaba3;
+  --felt: #1c6a44;
+  --felt-dark: #0f4329;
+  --gold: #e6c068;
+  --gold-dark: #b8923c;
+  --red: #d0343f;
+  --win: #7bd88f;
+  --lose: #ff8a80;
+  --card-w: 84px;
+  --card-h: 120px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-html {
-  height: 100%;
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 html,
@@ -21,29 +28,397 @@ body {
 }
 
 body {
-  min-height: 100%;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-geist-sans), Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+/* ---------- Leht ---------- */
+
+.page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+.title {
+  margin-bottom: 20px;
+}
+
+.title h1 {
+  font-size: 2rem;
+  letter-spacing: 0.02em;
+  color: var(--gold);
+}
+
+.title p {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.loading {
+  color: var(--muted);
+  padding: 40px 0;
+}
+
+.game {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 800px) {
+  .game {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- Laud ---------- */
+
+.table {
+  background: radial-gradient(ellipse at center, var(--felt) 0%, var(--felt-dark) 100%);
+  border: 8px solid #3b2a1a;
+  border-radius: 28px;
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.45);
+  padding: 24px;
+  min-height: 440px;
   display: flex;
   flex-direction: column;
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  justify-content: space-between;
+  gap: 16px;
 }
 
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
+.hand {
+  min-height: calc(var(--card-h) + 32px);
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
+.hand-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.75);
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
+.hand-total {
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text);
+}
+
+.hand-total.bust {
+  color: var(--lose);
+}
+
+.cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ---------- Kaart ---------- */
+
+.card {
+  position: relative;
+  width: var(--card-w);
+  height: var(--card-h);
+  background: #fbfaf5;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+  color: #161616;
+  animation: deal 0.3s ease-out;
+}
+
+.card.red {
+  color: var(--red);
+}
+
+.corner {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.05;
+  text-align: center;
+}
+
+.corner.bottom {
+  top: auto;
+  left: auto;
+  bottom: 6px;
+  right: 8px;
+  transform: rotate(180deg);
+}
+
+.pip {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 2.2rem;
+}
+
+.card-back {
+  background:
+    repeating-linear-gradient(45deg, #8d1d26 0 6px, #a3242f 6px 12px);
+  border: 4px solid #fbfaf5;
+}
+
+@keyframes deal {
+  from {
+    opacity: 0;
+    transform: translateY(-24px) rotate(-4deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------- Teade laua keskel ---------- */
+
+.message {
+  min-height: 56px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
+.hint {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 12px;
+  padding: 8px 22px;
+  animation: pop 0.25s ease-out;
+}
+
+.result strong {
+  font-size: 1.4rem;
+}
+
+.result-win strong,
+.result-blackjack strong {
+  color: var(--win);
+}
+
+.result-blackjack strong {
+  color: var(--gold);
+}
+
+.result-lose strong,
+.result-bust strong {
+  color: var(--lose);
+}
+
+@keyframes pop {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+/* ---------- Nupud ---------- */
+
+.controls {
+  min-height: 120px;
+  padding: 16px 0;
+}
+
+.actions,
+.bet-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.betting {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.btn {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 10px 22px;
+  font-weight: 600;
+  min-width: 96px;
+}
+
+.btn:not(:disabled):hover {
+  border-color: var(--gold);
+}
+
+.btn-gold {
+  background: var(--gold);
+  border-color: var(--gold-dark);
+  color: #1b1405;
+}
+
+.btn-ghost {
+  background: transparent;
+}
+
+.bet-amount {
+  font-weight: 600;
+  min-width: 100px;
+}
+
+.chips {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  border: 5px dashed rgba(255, 255, 255, 0.85);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+  transition: transform 0.1s;
+}
+
+.chip:not(:disabled):hover {
+  transform: translateY(-3px);
+}
+
+.chip-10 {
+  background: #2f6fd6;
+}
+
+.chip-20 {
+  background: #2c9a5a;
+}
+
+.chip-50 {
+  background: #c23b3b;
+}
+
+.chip-100 {
+  background: #222;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  color: var(--muted);
+  text-decoration: underline;
+  font-size: 0.85rem;
+  margin-top: 12px;
+}
+
+/* ---------- Külgriba ---------- */
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.panel h2 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.balance-amount {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.stats .wide {
+  grid-column: span 2;
+}
+
+.stats dt {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.stats dd {
+  font-size: 1.1rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Telefon ---------- */
+
+@media (max-width: 500px) {
+  :root {
+    --card-w: 60px;
+    --card-h: 86px;
+  }
+
+  .table {
+    padding: 14px;
+    border-width: 6px;
+    min-height: 360px;
+  }
+
+  .pip {
+    font-size: 1.6rem;
+  }
+
+  .corner {
+    font-size: 0.75rem;
+  }
+
+  .btn {
+    min-width: 0;
+    flex: 1;
   }
 }
