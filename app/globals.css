@@ -548,3 +548,24 @@ button:disabled {
 .hand-badge.result-push {
   color: var(--text);
 }
+
+/* ---------- Kiirklahvid ---------- */
+
+.btn kbd {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.7rem;
+  font-weight: 500;
+  border: 1px solid var(--panel-border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0 5px;
+  margin-left: 6px;
+  color: var(--muted);
+}
+
+/* Puutetundliku ekraaniga seadmetel klaviatuuri pole */
+@media (hover: none) {
+  .btn kbd {
+    display: none;
+  }
+}

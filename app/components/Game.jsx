@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useEffectEvent, useState } from 'react';
 import Hand from './Hand';
 import Stats from './Stats';
 import Leaderboard from './Leaderboard';
@@ -214,6 +214,24 @@ export default function Game() {
   const isSplit = hands.length > 1;
   const brokeAfterRound = phase === 'betting' && balance < CHIPS[0];
 
+  // Kiirklahvid: H = Hit, S = Stand, D = Double, P = Split
+  const onKeyDown = useEffectEvent((event) => {
+    if (!playing || event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
+    // Nime kirjutamine edetabeli väljale ei tohi mängus käike teha
+    if (event.target.closest?.('input, textarea')) return;
+
+    const key = event.key.toLowerCase();
+    if (key === 'h') hit();
+    else if (key === 's') stand();
+    else if (key === 'd' && canDouble) double();
+    else if (key === 'p' && canSplitNow) split();
+  });
+
+  useEffect(() => {
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
   return (
     <div className="game">
       <div className="table-area">
@@ -257,17 +275,17 @@ export default function Game() {
         <div className="controls">
           {phase === 'player' && (
             <div className="actions">
-              <button className="btn" onClick={hit}>
-                Hit
+              <button className="btn" onClick={hit} title="Hit (H)">
+                Hit <kbd>H</kbd>
               </button>
-              <button className="btn" onClick={stand}>
-                Stand
+              <button className="btn" onClick={stand} title="Stand (S)">
+                Stand <kbd>S</kbd>
               </button>
-              <button className="btn" onClick={double} disabled={!canDouble}>
-                Double
+              <button className="btn" onClick={double} disabled={!canDouble} title="Double (D)">
+                Double <kbd>D</kbd>
               </button>
-              <button className="btn" onClick={split} disabled={!canSplitNow}>
-                Split
+              <button className="btn" onClick={split} disabled={!canSplitNow} title="Split (P)">
+                Split <kbd>P</kbd>
               </button>
             </div>
           )}
