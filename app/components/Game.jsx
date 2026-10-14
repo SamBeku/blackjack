@@ -12,13 +12,14 @@ import {
   handValue,
   isBlackjack,
   isBust,
+  canSplit,
   dealerShouldHit,
-  getResult,
-  payout,
+  settleHands,
 } from '@/lib/blackjack';
 
 const START_BALANCE = 1000;
 const CHIPS = [10, 20, 50, 100];
+const MAX_HANDS = 4; // splitti saab teha kuni 4 käeni
 const STORAGE_KEY = 'blackjack-save';
 const EMPTY_STATS = { hands: 0, wins: 0, losses: 0, pushes: 0, blackjacks: 0, peak: START_BALANCE };
 
@@ -46,15 +47,17 @@ function loadSave() {
 export default function Game() {
   const [save, setSave] = useState(loadSave);
   const [deck, setDeck] = useState([]);
-  const [player, setPlayer] = useState([]);
+  // Mängija käed. Ilma splitita on neid üks: [{ cards, stake, done }]
+  const [hands, setHands] = useState([]);
+  const [active, setActive] = useState(0); // mitmendat kätt praegu mängitakse
   const [dealer, setDealer] = useState([]);
   // 'betting' = panuse valimine, 'player' = mängija käik, 'dealer' = diileri käik
   const [phase, setPhase] = useState('betting');
   const [bet, setBet] = useState(0); // järgmise käe panus
-  const [stake, setStake] = useState(0); // praeguses käes mängus olev summa
   const [result, setResult] = useState(null);
 
   const { balance, stats } = save;
+  const hand = hands[active];
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(save));
@@ -70,51 +73,81 @@ export default function Game() {
     const { cards, deck: rest } = deal(shoe, 4);
     const p = [cards[0], cards[2]];
     const d = [cards[1], cards[3]];
+    const first = [{ cards: p, stake: bet, done: false }];
 
     setDeck(rest);
-    setPlayer(p);
+    setHands(first);
+    setActive(0);
     setDealer(d);
-    setStake(bet);
     setResult(null);
     setSave((s) => ({ ...s, balance: s.balance - bet }));
 
     if (isBlackjack(p) || isBlackjack(d)) {
-      finishRound(p, d, bet);
+      finishRound(first, d);
     } else {
       setPhase('player');
     }
   }
 
+  // Asendab aktiivse käe uuega
+  function withActive(changes) {
+    return hands.map((h, i) => (i === active ? { ...h, ...changes } : h));
+  }
+
+  // Pärast iga käiku: kas mängida järgmist kätt või on diileri kord
+  function continueRound(newHands, shoe) {
+    setHands(newHands);
+    setDeck(shoe);
+
+    const next = newHands.findIndex((h) => !h.done);
+    if (next !== -1) {
+      setActive(next);
+    } else if (newHands.every((h) => isBust(h.cards))) {
+      finishRound(newHands, dealer); // kõik käed bust, diiler ei pea kaarte võtma
+    } else {
+      dealerTurn(newHands, shoe);
+    }
+  }
+
   function hit() {
     const { cards, deck: rest } = deal(deck);
-    const p = [...player, ...cards];
-    setDeck(rest);
-    setPlayer(p);
-
-    if (isBust(p)) finishRound(p, dealer, stake);
-    else if (handValue(p).total === 21) dealerTurn(p, rest, stake);
+    const newCards = [...hand.cards, ...cards];
+    continueRound(withActive({ cards: newCards, done: handValue(newCards).total >= 21 }), rest);
   }
 
   function stand() {
-    dealerTurn(player, deck, stake);
+    continueRound(withActive({ done: true }), deck);
   }
 
   // Double: panus kahekordseks, mängija saab täpselt ühe kaardi
   function double() {
-    const doubled = stake * 2;
     const { cards, deck: rest } = deal(deck);
-    const p = [...player, ...cards];
-    setSave((s) => ({ ...s, balance: s.balance - stake }));
-    setStake(doubled);
-    setDeck(rest);
-    setPlayer(p);
+    setSave((s) => ({ ...s, balance: s.balance - hand.stake }));
+    continueRound(withActive({ cards: [...hand.cards, ...cards], stake: hand.stake * 2, done: true }), rest);
+  }
 
-    if (isBust(p)) finishRound(p, dealer, doubled);
-    else dealerTurn(p, rest, doubled);
+  // Split: paar jagatakse kaheks käeks, teine käsi saab sama suure panuse.
+  // Ässade splitti korral saab kumbki käsi ainult ühe kaardi juurde.
+  function split() {
+    const { cards, deck: rest } = deal(deck, 2);
+    const aces = hand.cards[0].rank === 'A';
+    const makeHand = (first, second) => {
+      const newCards = [first, second];
+      return { cards: newCards, stake: hand.stake, done: aces || handValue(newCards).total === 21 };
+    };
+    const newHands = [
+      ...hands.slice(0, active),
+      makeHand(hand.cards[0], cards[0]),
+      makeHand(hand.cards[1], cards[1]),
+      ...hands.slice(active + 1),
+    ];
+
+    setSave((s) => ({ ...s, balance: s.balance - hand.stake }));
+    continueRound(newHands, rest);
   }
 
   // Diiler pöörab peidetud kaardi ja võtab kaarte, kuni tal on vähemalt 17
-  async function dealerTurn(p, shoe, currentStake) {
+  async function dealerTurn(finalHands, shoe) {
     setPhase('dealer');
     let d = dealer;
     let rest = shoe;
@@ -129,13 +162,21 @@ export default function Game() {
     }
 
     await sleep(500);
-    finishRound(p, d, currentStake);
+    finishRound(finalHands, d);
   }
 
-  function finishRound(p, d, currentStake) {
-    const type = getResult(p, d);
-    const won = payout(type, currentStake);
-    setResult({ type, change: won - currentStake });
+  function finishRound(finalHands, d) {
+    const results = settleHands(finalHands, d);
+    const staked = finalHands.reduce((sum, h) => sum + h.stake, 0);
+    const won = results.reduce((sum, r) => sum + r.won, 0);
+    const change = won - staked;
+    const count = (...types) => results.filter((r) => types.includes(r.type)).length;
+
+    // Ühe käe puhul näitame selle tulemust, splitti puhul summat kokku
+    let type = results[0].type;
+    if (results.length > 1) type = change > 0 ? 'win' : change < 0 ? 'lose' : 'push';
+
+    setResult({ type, change, hands: results.map((r) => r.type) });
     setPhase('betting');
 
     setSave((s) => {
@@ -143,11 +184,11 @@ export default function Game() {
       return {
         balance: newBalance,
         stats: {
-          hands: s.stats.hands + 1,
-          wins: s.stats.wins + (type === 'win' || type === 'blackjack' ? 1 : 0),
-          losses: s.stats.losses + (type === 'lose' || type === 'bust' ? 1 : 0),
-          pushes: s.stats.pushes + (type === 'push' ? 1 : 0),
-          blackjacks: s.stats.blackjacks + (type === 'blackjack' ? 1 : 0),
+          hands: s.stats.hands + results.length,
+          wins: s.stats.wins + count('win', 'blackjack'),
+          losses: s.stats.losses + count('lose', 'bust'),
+          pushes: s.stats.pushes + count('push'),
+          blackjacks: s.stats.blackjacks + count('blackjack'),
           peak: Math.max(s.stats.peak, newBalance),
         },
       };
@@ -157,7 +198,7 @@ export default function Game() {
   function startOver() {
     setSave({ balance: START_BALANCE, stats: EMPTY_STATS });
     setBet(0);
-    setPlayer([]);
+    setHands([]);
     setDealer([]);
     setResult(null);
   }
@@ -166,7 +207,11 @@ export default function Game() {
     if (window.confirm('Start over with $1000 and clear your stats?')) startOver();
   }
 
-  const canDouble = phase === 'player' && player.length === 2 && balance >= stake;
+  const playing = phase === 'player' && hand;
+  const canDouble = playing && hand.cards.length === 2 && balance >= hand.stake;
+  const canSplitNow = playing && canSplit(hand.cards) && hands.length < MAX_HANDS && balance >= hand.stake;
+  const inPlay = hands.reduce((sum, h) => sum + h.stake, 0);
+  const isSplit = hands.length > 1;
   const brokeAfterRound = phase === 'betting' && balance < CHIPS[0];
 
   return (
@@ -188,13 +233,25 @@ export default function Game() {
             ) : (
               <p className="hint">
                 {phase === 'betting' && 'Place your bet'}
-                {phase === 'player' && `In play: $${stake}`}
+                {phase === 'player' && `In play: $${inPlay}`}
                 {phase === 'dealer' && 'Dealer plays…'}
               </p>
             )}
           </div>
 
-          <Hand label="You" cards={player} />
+          <div className="player-hands">
+            {hands.length === 0 && <Hand label="You" cards={[]} />}
+            {hands.map((h, i) => (
+              <Hand
+                key={i}
+                label={isSplit ? `Hand ${i + 1} · $${h.stake}` : 'You'}
+                cards={h.cards}
+                active={isSplit && phase === 'player' && i === active}
+                badge={isSplit && result ? MESSAGES[result.hands[i]] : null}
+                badgeType={result?.hands[i]}
+              />
+            ))}
+          </div>
         </div>
 
         <div className="controls">
@@ -208,6 +265,9 @@ export default function Game() {
               </button>
               <button className="btn" onClick={double} disabled={!canDouble}>
                 Double
+              </button>
+              <button className="btn" onClick={split} disabled={!canSplitNow}>
+                Split
               </button>
             </div>
           )}
