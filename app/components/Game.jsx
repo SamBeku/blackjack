@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Hand from './Hand';
 import Stats from './Stats';
+import Leaderboard from './Leaderboard';
 import {
   createDeck,
   shuffle,
@@ -254,6 +255,7 @@ export default function Game() {
           <p className="balance-amount">${balance}</p>
         </section>
         <Stats stats={stats} onReset={resetGame} />
+        <Leaderboard balance={balance} hands={stats.hands} canSave={phase === 'betting' && stats.hands > 0} />
       </aside>
     </div>
   );
